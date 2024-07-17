@@ -1,9 +1,10 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
-import axios from "axios"; // Make sure axios is imported
-import Link from "next/link"; // Make sure Link is imported
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import Link from "next/link";
+import toast from "react-hot-toast";
 
 const Signup = () => {
   const router = useRouter();
@@ -14,38 +15,41 @@ const Signup = () => {
     password: "",
   });
 
-  const [errors, setErrors] = useState({});
+  const [buttonDisabled, setButtonDisabled] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const submit = (e) => {
-    e.preventDefault();
-    console.log(e.target);
+  useEffect(() => {
+    // Check if user details are filled
+    const { email, username, password } = user;
+    setButtonDisabled(!(email && username && password));
+  }, [user]);
 
-    setLoading(true);
+  const onSignup = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.post("/api/users/signup", user);
+      console.log("SignUp Success...!", response.data);
+      toast.success("Signup successful!");
+      router.push("/login");
+    } catch (error) {
+      console.log("Sign Up failed", error);
+      toast.error("Sign Up failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    axios
-      .post("/api/users/signup", user)
-      .then((res) => {
-        setLoading(false);
-        const response = res.data;
-        console.log(response);
-
-        if (response.status === 200) {
-          setUser("")
-          router.push('/verifyemail?message="Verify your email"');
-        } else if (response.status === 400) {
-          setErrors(response.errors);
-        }
-      })
-      .catch((err) => {
-        setLoading(false);
-        console.log("error is ", err);
-      });
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setUser((prevUser) => ({
+      ...prevUser,
+      [name]: value,
+    }));
   };
 
   return (
     <div className="bg-background">
-      <div className="h-screen w-screen flex justify-center items-center ">
+      <div className="h-screen w-screen flex justify-center items-center">
         <div className="w-full md:w-1/3 mx-2 bg-muted p-6 rounded-lg bg-[#76b2eb]">
           <div className="flex justify-center">
             <Image src="/logo.png" width={50} height={50} alt="Logo" />
@@ -54,68 +58,59 @@ const Signup = () => {
             Register
           </h1>
           <p className="flex text-black justify-center">
-            Welcome to the Threads
+            Welcome to the Register Page
           </p>
-          <form onSubmit={submit}>
-            <div className="mt-5 space-y-1">
-              <label htmlFor="username" className="text-black font-bold ">
-                UserName:
-              </label>
-              <input
-                type="text"
-                placeholder="Enter your UserName"
-                id="username"
-                className="input-class w-full p-2 text-blue-800 font-bold rounded-lg" // Add your input class
-                onChange={(e) => setUser({ ...user, username: e.target.value })}
-              />
-              {errors.username && (
-                <span className="text-red-400 font-bold">
-                  {errors.username}
-                </span>
-              )}
-            </div>
-            <div className="mt-5 space-y-1">
-              <label htmlFor="email" className="text-black  font-bold">
-                Email:
-              </label>
-              <input
-                type="email"
-                placeholder="Enter your email"
-                id="email"
-                className="input-class w-full text-blue-800 font-bold p-2 rounded-lg" // Add your input class
-                onChange={(e) => setUser({ ...user, email: e.target.value })}
-              />
-              {errors.email && (
-                <span className="text-red-400 font-bold">{errors.email}</span>
-              )}
-            </div>
-            <div className="mt-5 space-y-1">
-              <label htmlFor="password" className="text-black font-bold">
-                Password:
-              </label>
-              <input
-                type="password"
-                placeholder="Enter your password"
-                id="password"
-                className="input-class text-blue-800 font-bold w-full p-2 rounded-lg" // Add your input class
-                onChange={(e) => setUser({ ...user, password: e.target.value })}
-              />
-              {errors.password && (
-                <span className="text-red-400 font-bold">
-                  {errors.password}
-                </span>
-              )}
-            </div>
-            <div className="mt-5 space-y-1">
-              <button
-                className="w-full button-class bg-black p-3 rounded-lg"
-                disabled={loading}
-              >
-                {loading ? "Processing..." : "Register"}
-              </button>
-            </div>
-          </form>
-          <div className="mt-5 flex  justify-center">
+
+          {/* Username */}
+          <label className="text-black font-bold" htmlFor="username">
+            Username
+          </label>
+          <input
+            type="text"
+            name="username"
+            className="input-class w-full p-2 text-blue-800 focus:outline-none font-bold rounded-lg mb-4"
+            value={user.username}
+            onChange={handleInputChange}
+            placeholder="Enter Username..."
+          />
+
+          {/* Email */}
+          <label className="text-black font-bold" htmlFor="email">
+            Email
+          </label>
+          <input
+            type="email"
+            name="email"
+            className="input-class w-full p-2 text-blue-800 font-bold rounded-lg focus:outline-none mb-4"
+            value={user.email}
+            onChange={handleInputChange}
+            placeholder="Enter Email..."
+          />
+
+          {/* Password */}
+          <label className="text-black font-bold" htmlFor="password">
+            Password
+          </label>
+          <input
+            type="password"
+            name="password"
+            className="input-class w-full p-2 text-blue-800 font-bold rounded-lg focus:outline-none mb-4"
+            value={user.password}
+            onChange={handleInputChange}
+            placeholder="Enter Password..."
+          />
+
+          <div className="mt-5 space-y-1">
+            <button
+              onClick={onSignup}
+              className="w-full button-class bg-black text-white p-3 rounded-lg"
+              disabled={buttonDisabled || loading}
+            >
+              {loading ? "Processing..." : "Register"}
+            </button>
+          </div>
+
+          <div className="mt-5 flex justify-center">
             <span>Already Have an account?</span>
             <Link href="/login" className="text-blue-800 font-extrabold ml-2">
               Login
