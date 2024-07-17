@@ -1,19 +1,29 @@
 import nodemailer from 'nodemailer';
 import bcryptjs from 'bcryptjs';
-import User from "@/models/userModel";
+import User from '@/models/userModel';
 
 export const sendEmail = async ({ email, emailType, userId }) => {
     try {
         const hashedToken = await bcryptjs.hash(userId.toString(), 10);
 
-        const updateData = {
-            verifyToken: emailType === "VERIFY" ? hashedToken : undefined,
-            verifyTokenExpiration: emailType === "VERIFY" ? Date.now() + 3600000 : undefined,
-            forgotPasswordToken: emailType === "RESET" ? hashedToken : undefined,
-            forgotPasswordTokenExpiration: emailType === "RESET" ? Date.now() + 3600000 : undefined,
-        };
+        if (emailType === "VERIFY") {
+            const updatedUser = await User.findByIdAndUpdate(userId, {
+                $set: {
+                    verifyToken: hashedToken,
+                    verifyTokenExpiration: new Date(Date.now() + 3600000,) // 1 hour
+                }
+            },);
+            console.log("updated user for VERIFY", updatedUser);
 
-        await User.findByIdAndUpdate(userId, updateData, { new: true });
+        } else if (emailType === "RESET") {
+            await User.findByIdAndUpdate(userId, {
+                $set: {
+                    forgotPasswordToken: hashedToken,
+                    forgotPasswordTokenExpiration: new Date(Date.now() + 3600000,) // 1 hour
+                }
+            },)
+        }
+
 
         const transporter = nodemailer.createTransport({
             host: "sandbox.smtp.mailtrap.io",
